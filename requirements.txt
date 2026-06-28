@@ -1,0 +1,3 @@
+# Phase 1: dependency-free — uses sibling PUFworks-contracts/python only.
+# python-can added in Phase 4 (template_can encoder).
+# pyserial added in Phase 3 (solenoid_mcu encoder).
