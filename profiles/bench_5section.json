@@ -1,0 +1,20 @@
+{
+  "schema": "ActuatorProfileV1",
+  "name": "bench_solenoid_5",
+  "encoder": "solenoid_mcu",
+  "section_count": 5,
+  "transport": {
+    "type": "usb_serial",
+    "port": "COM5",
+    "baud": 115200
+  },
+  "section_map": {
+    "vision_lsb_left": true,
+    "shift": 0,
+    "invert": false
+  },
+  "rate": {
+    "mode": "none"
+  },
+  "pins": [2, 3, 4, 5, 6]
+}

@@ -29,9 +29,11 @@ For ISOBUS-specific CAN (Goldacres, 616R), use `PUFworks-isobus` instead.
 | Area | Path |
 | :-- | :-- |
 | Gateway engine | `actuation_engine.py` (Phase 1) |
-| Encoders | `encoders/` |
-| Machine profiles | `profiles/` |
-| Bench | `bench/actuation_smoke.py`, `bench/pipeline.py` |
+| Encoders | `encoders/solenoid_mcu.py` |
+| MCU protocol | `docs/MCU_PROTOCOL.md` |
+| Firmware | `firmware/src/main.cpp` |
+| Profiles | `profiles/bench_5section.json` |
+| Bench | `bench/actuation_smoke.py`, `bench/pipeline.py`, `bench/solenoid_smoke.py` |
 
 ## Wire protocol (mirror isobus ingest)
 
@@ -55,7 +57,8 @@ C:\Projects\
 
 ```powershell
 python bench/actuation_smoke.py --duration 2
-python bench/pipeline.py --duration 8   # Phase 2 — vision + actuation
+python bench/pipeline.py --duration 8   # Phase 2 — vision + actuation (P1–P4)
+python bench/solenoid_smoke.py          # Phase 3 — solenoid encoder (mock)
 ```
 
 Reference: `PUFworks-vision/bench/pipeline.py` for spawn/bridge pattern.

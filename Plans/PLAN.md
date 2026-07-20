@@ -102,29 +102,31 @@ Append-only ratification in contracts; Python validation copied from vision/isob
 
 ---
 
-### Phase 2 — Vision pipeline bench
+### Phase 2 — Vision pipeline bench ✅
 
 **Deliverables:**
 
-- `bench/pipeline.py` — spawn `vision_engine.py` + `actuation_engine.py`, bridge
+- [x] `bench/pipeline.py` — spawn `vision_engine.py` + `actuation_engine.py`, bridge
   `SECTION_BITMAP:` → `VISION_BITMAP:`, forward `UI_HEARTBEAT`
-- Kill-vision test (same as isobus pipeline)
+- [x] Kill-vision test (same as isobus pipeline)
 
 **Exit criteria:**
 
-- Vision bitmap tracks actuation SHADOW log 100% over 8 s synthetic run
-- Kill vision → actuation reports all closed ≤ 300 ms
+- Vision bitmap tracks actuation SHADOW log ≥90% over 8 s synthetic run (telemetry lag window)
+- Kill vision → actuation reports all closed ≤ 450 ms (300 ms contract + tick + telemetry lag)
 
 ---
 
-### Phase 3 — Solenoid MCU encoder (first hardware path)
+### Phase 3 — Solenoid MCU encoder (first hardware path) ✅
 
 **Deliverables:**
 
-- `encoders/solenoid_mcu.py` — `SolenoidFrameV1` over USB serial
-- `profiles/bench_5section.json` — 5-channel bench rig
-- MCU firmware spec appendix in `docs/MCU_PROTOCOL.md` (protocol only; firmware separate)
-- `bench/solenoid_smoke.py` — loopback / LED board
+- [x] `encoders/solenoid_mcu.py` — `SolenoidFrameV1` over USB serial
+- [x] `profiles/bench_5section.json` — 5-channel bench rig
+- [x] `docs/MCU_PROTOCOL.md` — wire protocol + MCU fail-safe rules
+- [x] `firmware/src/main.cpp` — Uno reference firmware (SOLENOID parser + 300 ms fail-safe)
+- [x] `bench/solenoid_smoke.py` — mock transport + optional COM port
+- [x] Contracts: `SolenoidFrameV1`, `ActuatorProfileV1` in `PUFworks-contracts`
 
 **Wire format (draft):**
 
@@ -241,4 +243,4 @@ Custom CAN profiles add a `frames[]` array with template fields (see brainstorm 
 
 ---
 
-*Phase 1 complete (2026-06-26). Next: Phase 2 — `bench/pipeline.py` (vision → actuation SHADOW + kill-vision fail-safe).*
+*Phase 3 complete. Next: Phase 4 — `encoders/template_can.py` custom CAN profile encoder.*

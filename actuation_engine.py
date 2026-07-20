@@ -27,11 +27,18 @@ import time
 
 from contract_import import load as _load_contracts
 
+try:
+    from encoders import create_encoder
+except ImportError:
+    create_encoder = None  # type: ignore[misc, assignment]
+
 _contracts = _load_contracts()
 SECTION_BITMAP_STALE_MS = _contracts.SECTION_BITMAP_STALE_MS
 UI_HEARTBEAT_TIMEOUT_S = _contracts.UI_HEARTBEAT_TIMEOUT_S
 validate_section_bitmap_v1 = _contracts.validate_section_bitmap_v1
 ContractError = _contracts.ContractError
+validate_actuator_profile_v1 = _contracts.validate_actuator_profile_v1
+validate_solenoid_frame_v1 = _contracts.validate_solenoid_frame_v1
 
 TICK_HZ = 10.0
 TICK_S = 1.0 / TICK_HZ
@@ -69,6 +76,7 @@ class ActuationController:
 
         self.section_bitmap = 0
         self.actuator_profile = "none"
+        self.encoder = None
         self.output_counts = {"section": 0, "rate": 0}
         self._last_shadow_logged = -1
         self._last_dispatched_bitmap = -1
@@ -115,6 +123,53 @@ class ActuationController:
 
     def set_speed_kmh(self, speed: float) -> None:
         self.speed_kmh = max(0.0, float(speed))
+
+    def load_actuator_profile(self, name: str) -> bool:
+        if create_encoder is None:
+            self.log("Encoder package unavailable")
+            return False
+        profiles_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
+        stem = name.strip()
+        if stem.lower().endswith(".json"):
+            stem = stem[:-5]
+        path = None
+        for cand in (stem + ".json", stem):
+            p = os.path.join(profiles_dir, cand)
+            if os.path.isfile(p):
+                path = p
+                break
+        if path is None:
+            self.log(f"Actuator profile not found: {name!r} (looked in {profiles_dir})")
+            return False
+        try:
+            with open(path, encoding="utf-8") as f:
+                profile = json.load(f)
+            validate_actuator_profile_v1(profile)
+        except (OSError, json.JSONDecodeError, ContractError) as e:
+            self.log(f"Actuator profile load failed: {e}")
+            return False
+        if self.encoder is not None:
+            self.encoder.stop()
+            self.encoder = None
+        try:
+            self.encoder = create_encoder(profile, self.log, _contracts)
+        except ValueError as e:
+            self.log(f"Encoder init failed: {e}")
+            return False
+        self.actuator_profile = str(profile.get("name", stem))
+        self.num_boom_sections = int(profile["section_count"])
+        self.log(f"Actuator profile loaded: {self.actuator_profile} from {os.path.basename(path)}")
+        return True
+
+    def set_actuator_profile(self, name: str) -> bool:
+        if name in ("none", "", "off"):
+            if self.encoder is not None:
+                self.encoder.stop()
+                self.encoder = None
+            self.actuator_profile = "none"
+            self.log("Actuator profile cleared")
+            return True
+        return self.load_actuator_profile(name)
 
     def set_manual_section_bitmap(self, bitmap: int) -> bool:
         self.manual_section_bitmap = int(bitmap) & 0xFFFFFFFF
@@ -201,10 +256,17 @@ class ActuationController:
             self.control_authority = "SHADOW"
 
     def _dispatch_output(self) -> None:
-        """Phase 1: log / count only — no hardware encoders yet."""
         out = self.section_bitmap if self._interlocks_ok() else 0
+        allow_tx = self._output_allowed("section")
 
-        if not self._output_allowed("section"):
+        if self.encoder is not None:
+            sent_before = self.encoder.get_status().get("frames_sent", 0)
+            self.encoder.dispatch(out, allow_tx=allow_tx)
+            if allow_tx and self.encoder.get_status().get("frames_sent", 0) > sent_before:
+                self.output_counts["section"] += 1
+            return
+
+        if not allow_tx:
             if self._authority_level() <= self.AUTHORITY_ORDER["SHADOW"] and out != self._last_shadow_logged:
                 self.log(f"SHADOW section mask 0x{out:X} (output suppressed)")
                 self._last_shadow_logged = out
@@ -212,7 +274,7 @@ class ActuationController:
 
         self.output_counts["section"] += 1
         if out != self._last_dispatched_bitmap:
-            self.log(f"OUTPUT section mask 0x{out:X} (encoder dispatch Phase 3+)")
+            self.log(f"OUTPUT section mask 0x{out:X} (no encoder profile loaded)")
             self._last_dispatched_bitmap = out
 
     def tick(self) -> None:
@@ -222,7 +284,7 @@ class ActuationController:
 
 
 def build_telemetry(ctrl: ActuationController) -> dict:
-    return {
+    payload = {
         "schema": "ActuationTelemetryV1",
         "ts_ms": int(time.time() * 1000),
         "control_authority": ctrl.control_authority,
@@ -240,6 +302,9 @@ def build_telemetry(ctrl: ActuationController) -> dict:
         "actuator_profile": ctrl.actuator_profile,
         "output_counts": dict(ctrl.output_counts),
     }
+    if ctrl.encoder is not None:
+        payload["encoder_status"] = ctrl.encoder.get_status()
+    return payload
 
 
 def _parse_int(text: str) -> int:
@@ -303,15 +368,14 @@ def handle_command(ctrl: ActuationController, line: str) -> None:
     elif line.startswith("SET_ACTUATOR_PROFILE:"):
         parts = line.split(":", 1)
         if len(parts) == 2:
-            ctrl.actuator_profile = parts[1].strip()
-            ctrl.log(f"Actuator profile -> {ctrl.actuator_profile}")
+            ctrl.set_actuator_profile(parts[1].strip())
     else:
         ctrl.log(f"REJECTED out-of-scope command: {line.split(':')[0]}")
 
 
 def main() -> None:
     print(
-        "PUFworks Actuation Gateway started. Phase 1 — ingest + SHADOW (no hardware).",
+        "PUFworks Actuation Gateway started. Phase 3 — ingest + solenoid encoder.",
         flush=True,
     )
     ctrl = ActuationController()

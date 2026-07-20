@@ -1,3 +1,7 @@
-# Phase 1: dependency-free — uses sibling PUFworks-contracts/python only.
-# python-can added in Phase 4 (template_can encoder).
-# pyserial added in Phase 3 (solenoid_mcu encoder).
+# PUFworks-actuation — Python dependencies
+#
+# Phase 3: solenoid MCU encoder (USB serial to boom MCU)
+pyserial>=3.5
+
+# Phase 4: template CAN encoder (not yet used)
+# python-can>=4.0

@@ -18,8 +18,8 @@ Read `BOUNDARY.md`, `SAFETY.md`, and `INTEGRATION_SEAM.md` before writing code.
 
 ## Status
 
-**Scaffold only** — docs and plan in place; engine not yet implemented. See
-`Plans/PLAN.md` for phased bring-up.
+**Phase 2** — `actuation_engine.py` SHADOW gateway + vision pipeline bench. See
+`Plans/PLAN.md` for phased bring-up (Phase 3 = solenoid MCU next).
 
 ## Why a separate repo
 
@@ -86,8 +86,11 @@ pip install -r requirements.txt   # no packages required today
 
 python actuation_engine.py
 
-# Bench smoke
+# Bench smoke (synthetic bitmap pump)
 python bench/actuation_smoke.py
+
+# Phase 2 — vision + actuation cross-process pipeline
+python bench/pipeline.py --duration 8
 ```
 
 Manual pipe (workshop, no shell):
