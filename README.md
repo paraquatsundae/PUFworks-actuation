@@ -14,6 +14,9 @@ Direct actuation sidecar for the PUFworks sprayer stack. Consumes the same
 `SectionBitmapV1` feed as `PUFworks-isobus`, but drives **non-ISOBUS** outputs:
 custom CAN profiles, MCU solenoid banks, and 0–5 V rate controllers.
 
+Uses a similar authority-ladder idea for non-ISOBUS gear. **Not an ISOBUS ECU
+and not a John Deere product.**
+
 Vision stays unified in `PUFworks-vision`. This repo owns only the **last mile**
 from normalized actuation intent to hardware.
 
@@ -21,7 +24,8 @@ from normalized actuation intent to hardware.
 PUFworks-vision ──SectionBitmapV1──► PUFworks-actuation ──► MCU / custom CAN / PWM
        │                                    ▲
        │                                    │ UI_HEARTBEAT, authority (via integrator)
-       └── (same feed, optional) ──► PUFworks-isobus ──► ISOBUS / JD / Goldacres
+       └── (same feed, optional) ──► PUFworks-isobus ──► ISO 11783 / J1939 CAN
+              (experimental, machine-specific — not AEF-certified)
 ```
 
 Read `BOUNDARY.md`, `SAFETY.md`, and `INTEGRATION_SEAM.md` before writing code.
@@ -35,7 +39,7 @@ Read `BOUNDARY.md`, `SAFETY.md`, and `INTEGRATION_SEAM.md` before writing code.
 
 | Concern | `PUFworks-isobus` | `PUFworks-actuation` |
 | :-- | :-- | :-- |
-| Bus role | J1939 / ISOBUS address claim, DDI 141/157, GreenSeeker serial | Profile-driven custom CAN, USB serial to boom MCU |
+| Bus role | ISO 11783 / J1939 on CAN (listen-first; machine-specific) | Profile-driven custom CAN, USB serial to boom MCU |
 | Fail-safe model | Control Authority ladder + CAN interlocks | Gateway heartbeat + MCU hardware fail-safe |
 | Bench hardware | Virtual CAN, GRC display | Scope on 5 V coils, LED/solenoid click tests |
 | Vision coupling | Same `SectionBitmapV1` ingest | Same `SectionBitmapV1` ingest |
@@ -117,7 +121,7 @@ python actuation_engine.py
 ## Boundaries
 
 - **No vision / OpenCV / GoB** — subscribe to `SectionBitmapV1` only.
-- **No ISOBUS address claim** — use `PUFworks-isobus` for Goldacres / 616R CAN paths.
+- **No ISOBUS address claim** — use `PUFworks-isobus` for ISO 11783 / J1939 CAN paths (experimental and machine-specific — not a certified multi-brand guarantee).
 - **No direct laptop GPIO to solenoids** — MCU owns coil drivers and local fail-safe.
 - **No agronomy / dataset capture** — offline only in `PUFworks-agronomy`.
 

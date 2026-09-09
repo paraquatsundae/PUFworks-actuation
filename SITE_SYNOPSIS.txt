@@ -3,13 +3,13 @@ ROLE: Direct hardware actuation gateway (non-ISOBUS)
 STATUS: active (Phase 2 gateway; hardware encoders Phase 3+)
 
 ONE-LINER
-Mirrors the ISOBUS safety model but drives custom CAN, boom MCU solenoids, and 0–5 V rate outputs instead of John Deere ISOBUS.
+Uses a similar authority-ladder idea for non-ISOBUS gear (custom CAN, boom MCU solenoids, 0–5 V rate). Not an ISOBUS ECU and not a John Deere product.
 
 SYNOPSIS
 - Subscribes to the same SectionBitmapV1 feed as PUFworks-isobus; vision stays unified in PUFworks-vision (no forked detection).
 - actuation_engine.py ingests bitmaps, applies authority ladder + 300 ms vision staleness + UI heartbeat interlocks; SHADOW mode computes but suppresses TX.
 - Intended outputs: profile-driven custom CAN, USB serial to boom MCU, PWM/0–5 V rate — laptop never switches coils directly.
-- Does NOT claim ISOBUS addresses, run GoB/camera code, or replace PUFworks-isobus for John Deere / ISOBUS CAN paths (those run in parallel if needed).
+- Does NOT claim ISOBUS addresses, run GoB/camera code, or replace PUFworks-isobus for ISO 11783 / J1939 CAN paths (those run in parallel if needed).
 - MCU must fail-safe OFF if gateway heartbeat stops; separate 12 V solenoid vs 5 V logic supplies required on real hardware.
 - Bench: actuation_smoke.py and cross-process pipeline.py with vision; shell integrator routing (isobus | actuation | both) still deferred.
 
